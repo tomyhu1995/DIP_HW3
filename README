@@ -1,0 +1,22 @@
+Please read this file before using this program !
+--------------------------------------------------------------------------------------------------------------------------------------
+1. This program is made on Ubuntu 14.04 and modify on Ubuntu 14.04. I am not sure this program can be compiled or run on other OS
+2. Notice that input arguments' priority.
+3. If you have any question, please contact developer by this e-mail address : tomyhu1995@gmail.com
+--------------------------------------------------------------------------------------------------------------------------------------
+
+**************************************************************************************************************************************
+The following are the steps which can help you compile this program :
+1. make all -j : compile this program with multi-thread
+2. make clean : clean all object file and output image file.
+**************************************************************************************************************************************
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+The following are input arguments of this program : 
+Open a BMP file and store : -s <input_file> <output_file>
+Open two BMP files and put file2 on file1 with specific position : -c <file_1> <file_2> <position x> <position y> <output_file>
+Open a BMP file, convert it to gray level, and store it : -g <input_file> <output_file>
+Open two BMP files and put file2 on file1 with specific position and then convert to gray level :
+-m <file_1> <file_2> <position x> <position y> <output_file>
+Create histogram : -H <image_file> <output TXT file>
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
