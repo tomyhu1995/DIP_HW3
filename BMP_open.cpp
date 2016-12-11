@@ -322,7 +322,7 @@ void Dilation(unsigned char **input, unsigned char **output, int width, int heig
 
 }
 
-void opening(BMP input){
+void opening(BMP input, char *filename){
 	BMP output_img;
 	output_img.SetSize(input.TellWidth(), input.TellHeight());
 	output_img.SetBitDepth(8);
@@ -365,14 +365,14 @@ void opening(BMP input){
 		}
 	}
 
-	cout << "writing opening ... " << endl;					
-	output_img.WriteToFile( "opening.bmp" );
-
 	for(int i = 0 ; i < input.TellHeight(); i++){
 		free(tmp[i]);
 		free(output[i]);
 		free(input_pixel[i]);
 	}
+
+	cout << "writing opening.bmp ... " << endl;					
+	output_img.WriteToFile(filename);
 
 }
 
@@ -385,7 +385,9 @@ int main(int argc, char const *argv[])
 
 	BMP input;
 	input.ReadFromFile("HW3_1.bmp");
-	opening(input);
+	opening(input, "opening.bmp");
+
+	
 
 
 	return 0;
