@@ -3,12 +3,12 @@ CPP = g++
 
 CFLAGS = 
 CFLAGS += -g
-CFLAGS += -Wall
+#CFLAGS += -Wall
 CFLAGS += -std=c99
 
 CPPFLAGS = 
 CPPFLAGS += -g
-CPPFLAGS += -Wall
+#CPPFLAGS += -Wall
 
 CFLAGS_CPP =
 CFLAGS_CPP += -O3 -pipe -fomit-frame-pointer -funroll-all-loops -s

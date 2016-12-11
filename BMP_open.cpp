@@ -205,7 +205,6 @@ void background_removal(IMG *img){
 
 	BMP Output;
 	Output.SetSize( right - left + 1, bottom - top +1);
-	 //Output.SetBitDepth( 24 );
 	Output.SetBitDepth( 8 );
 	RangedPixelToPixelCopy( Background, left, right, bottom, top, Output, 0,0 );	
 							 
@@ -214,29 +213,26 @@ void background_removal(IMG *img){
 
 }
 
-unsigned char MaxNeighbor(unsigned char **input, int width, int height){
+unsigned char MaxNeighbor(unsigned char *input, int width, int height){
 	unsigned char MAX = 0;
 
-	for(int i = 0; i < width; i++){
-		for(int j = 0; j < height; j++){
-			if(input[j][i] > MAX){
-				MAX = input[j][i];
-			}
+	for(int j = 0; j < height * width; j++){
+		if(input[j] > MAX){
+				MAX = input[j];
 		}
 	}
 	return MAX;
 }
 
-unsigned char MinNeighbor(unsigned char **input, int width, int height){
+unsigned char MinNeighbor(unsigned char *input, int width, int height){
 	unsigned char Min = 255;
 
-	for(int i = 0; i < width; i++){
-		for(int j = 0; j < height; j++){
-			if(input[j][i] < Min){
-				Min = input[j][i];
-			}
+	for(int i = 0 ; i < width * height; i++){
+		if(input[i] < Min){
+			Min = input[i];
 		}
 	}
+	
 	return Min;
 }
 
@@ -246,14 +242,10 @@ void Erosion(unsigned char **input, unsigned char **output, int width, int heigh
 										{1,1,1},
 										{1,1,1}};
 
-	unsigned char **tmp_neighbor;
-	tmp_neighbor = (unsigned char **)malloc(sizeof(unsigned char) * 3);
-	for(int i = 0; i < 3;i++){
-		tmp_neighbor[i] = (unsigned char *)malloc(sizeof(unsigned char) * 3);
-	}
+	unsigned char tmp_neighbor[9] = {0};
 
 	int row_count =0, col_count=0;
-
+	int counter = 0;
 	for(int i = 1; i < width - 1 ; i++){
 		for(int j = 1; j < height - 1; j++){
 			/*
@@ -261,7 +253,8 @@ void Erosion(unsigned char **input, unsigned char **output, int width, int heigh
 			 */
 			for(int column = i-1; column <= i+1; column++){//column
 				for(int row = j-1; row <= j+1; row++){//row
-					tmp_neighbor[row_count][col_count] = input[row][column] * sample_mask[row_count][col_count];
+					tmp_neighbor[counter] = input[row][column] * sample_mask[row_count][col_count];
+					counter++;
 					row_count++;
 				}
 				row_count = 0;
@@ -270,13 +263,10 @@ void Erosion(unsigned char **input, unsigned char **output, int width, int heigh
 			
 			output[j][i] = MinNeighbor(tmp_neighbor, 3, 3);
 
+			counter = 0;
 			row_count = 0;
 			col_count = 0;
 		}
-	}
-
-	for(int i = 0; i < 3;i++){
-		free(tmp_neighbor[i]);
 	}
 
 }
@@ -287,14 +277,10 @@ void Dilation(unsigned char **input, unsigned char **output, int width, int heig
 										{1,1,1},
 										{1,1,1}};
 
-	unsigned char **tmp_neighbor;
-	tmp_neighbor = (unsigned char **)malloc(sizeof(unsigned char) * 3);
-	for(int i = 0; i < 3;i++){
-		tmp_neighbor[i] = (unsigned char *)malloc(sizeof(unsigned char) * 3);
-	}
+	unsigned char tmp_neighbor[9] = {0};
 
 	int row_count =0, col_count=0;
-
+	int counter = 0;
 	for(int i = 1; i < width - 1 ; i++){
 		for(int j = 1; j < height - 1; j++){
 			/*
@@ -302,22 +288,19 @@ void Dilation(unsigned char **input, unsigned char **output, int width, int heig
 			 */
 			for(int column = i-1; column <= i+1; column++){//column
 				for(int row = j-1; row <= j+1; row++){//row
-					tmp_neighbor[row_count][col_count] = input[row][column] * sample_mask[row_count][col_count];
+					tmp_neighbor[counter] = input[row][column] * sample_mask[row_count][col_count];
 					row_count++;
+					counter++;
 				}
 				row_count = 0;
 				col_count++;
 			}
 			
 			output[j][i] = MaxNeighbor(tmp_neighbor, 3, 3);
-
+			counter = 0;
 			row_count = 0;
 			col_count = 0;
 		}
-	}
-
-	for(int i = 0; i < 3;i++){
-		free(tmp_neighbor[i]);
 	}
 
 }
@@ -376,6 +359,59 @@ void opening(BMP input, char *filename){
 
 }
 
+void Closing(BMP input, char *filename){
+	BMP output_img;
+	output_img.SetSize(input.TellWidth(), input.TellHeight());
+	output_img.SetBitDepth(8);
+
+	unsigned char **tmp;
+	unsigned char **output;
+	unsigned char **input_pixel;
+	int counter = 0;
+	input_pixel = (unsigned char **)malloc(sizeof(unsigned char *) * (input.TellHeight()));
+	tmp = (unsigned char **)malloc(sizeof(unsigned char *) * (input.TellHeight()));
+	output = (unsigned char **)malloc(sizeof(unsigned char *) * (input.TellHeight()));
+
+	for(int i = 0 ; i < input.TellHeight(); i++){
+		tmp[i] = (unsigned char *)malloc(sizeof(unsigned char) * (input.TellWidth()));
+		output[i] = (unsigned char *)malloc(sizeof(unsigned char *) * (input.TellWidth()));
+		input_pixel[i] = (unsigned char *)malloc(sizeof(unsigned char *) * (input.TellWidth()));
+	}
+
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			input_pixel[i][j] = input.GetPixel(j,i).Red;
+			tmp[i][j] = input.GetPixel(j,i).Red;
+			output[i][j] = input.GetPixel(j,i).Red;
+			counter++;
+		}
+	}
+	
+	Dilation(input_pixel, tmp, input.TellWidth(), input.TellHeight());
+	Erosion(tmp, output, input.TellWidth(), input.TellHeight());	
+
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			RGBApixel NewPixel;
+			NewPixel.Alpha = input.GetPixel(j,i).Alpha;
+			NewPixel.Blue = output[i][j];
+			NewPixel.Green = output[i][j];
+			NewPixel.Red = output[i][j];
+			output_img.SetPixel( j, i, NewPixel);
+		}
+	}
+
+	for(int i = 0 ; i < input.TellHeight(); i++){
+		free(tmp[i]);
+		free(output[i]);
+		free(input_pixel[i]);
+	}
+
+	cout << "writing closing.bmp ... " << endl;					
+	output_img.WriteToFile(filename);
+
+}
+
 int main(int argc, char const *argv[])
 {
 	IMG img;
@@ -383,9 +419,13 @@ int main(int argc, char const *argv[])
 	Binarization(&img);
 	background_removal(&img);
 
-	BMP input;
-	input.ReadFromFile("HW3_1.bmp");
-	opening(input, "opening.bmp");
+	BMP input_1;
+	input_1.ReadFromFile("HW3_1.bmp");
+	opening(input_1, "opening.bmp");
+
+	BMP input_2;
+	input_2.ReadFromFile("HW3_1.bmp");
+	Closing(input_2, "closing.bmp");
 
 	
 
