@@ -19,6 +19,8 @@ extern "C"{
 	#include "IMG_CREATE.h"
 }
 
+#define file_path "image/f0542_07.bmp"
+//#define file_path "image/s0554_02.bmp"
 #define tmp_file "tmp.bmp"
 
 void PRINT_IMG_INFO(IMG img){
@@ -197,19 +199,23 @@ void background_removal(IMG *img){
 	printf("top = %d\t", top);
 	printf("bottom = %d\n", bottom);
 
-	free(cumulative_horizontal);
-	free(cumulative_vertical);
+	//free(cumulative_horizontal);
+	//free(cumulative_vertical);
 
 	BMP Background;
-	Background.ReadFromFile("image/f0542_07.bmp");
+	Background.ReadFromFile(file_path);
 
 	BMP Output;
 	Output.SetSize( right - left + 1, bottom - top +1);
-	Output.SetBitDepth( 8 );
-	RangedPixelToPixelCopy( Background, left, right, bottom, top, Output, 0,0 );	
+	Output.SetBitDepth( Background.TellBitDepth());
+	if(Output.TellBitDepth() < 16){
+		CreateGrayscaleColorTable(Output);
+	}
+	RangedPixelToPixelCopy( Background, left, right, bottom, top, Output, 0, 0);
 							 
 	cout << "writing HW3_1.bmp ... " << endl;					
 	Output.WriteToFile( "HW3_1.bmp" );
+	//Background.WriteToFile("HW3_1.bmp");
 
 }
 
@@ -246,6 +252,7 @@ void Erosion(unsigned char **input, unsigned char **output, int width, int heigh
 
 	int row_count =0, col_count=0;
 	int counter = 0;
+	unsigned char new_value;
 	for(int i = 1; i < width - 1 ; i++){
 		for(int j = 1; j < height - 1; j++){
 			/*
@@ -261,7 +268,13 @@ void Erosion(unsigned char **input, unsigned char **output, int width, int heigh
 				col_count++;
 			}
 			
-			output[j][i] = MinNeighbor(tmp_neighbor, 3, 3);
+			new_value = MaxNeighbor(tmp_neighbor, 3, 3);
+
+			for(int column = i-1; column <= i+1; column++){//column
+				for(int row = j-1; row <= j+1; row++){//row
+					output[column][row] = new_value;
+				}
+			}
 
 			counter = 0;
 			row_count = 0;
@@ -278,7 +291,7 @@ void Dilation(unsigned char **input, unsigned char **output, int width, int heig
 										{1,1,1}};
 
 	unsigned char tmp_neighbor[9] = {0};
-
+	unsigned char new_value;
 	int row_count =0, col_count=0;
 	int counter = 0;
 	for(int i = 1; i < width - 1 ; i++){
@@ -296,7 +309,14 @@ void Dilation(unsigned char **input, unsigned char **output, int width, int heig
 				col_count++;
 			}
 			
-			output[j][i] = MaxNeighbor(tmp_neighbor, 3, 3);
+			new_value = MinNeighbor(tmp_neighbor, 3, 3);
+
+			for(int column = i-1; column <= i+1; column++){//column
+				for(int row = j-1; row <= j+1; row++){//row
+					output[column][row] = new_value;
+				}
+			}
+
 			counter = 0;
 			row_count = 0;
 			col_count = 0;
@@ -309,6 +329,7 @@ void opening(BMP input, char *filename){
 	BMP output_img;
 	output_img.SetSize(input.TellWidth(), input.TellHeight());
 	output_img.SetBitDepth(8);
+	CreateGrayscaleColorTable(output_img);
 
 	unsigned char **tmp;
 	unsigned char **output;
@@ -349,10 +370,14 @@ void opening(BMP input, char *filename){
 	}
 
 	for(int i = 0 ; i < input.TellHeight(); i++){
-		free(tmp[i]);
-		free(output[i]);
-		free(input_pixel[i]);
+		//free(tmp[i]);
+		//free(output[i]);
+		//free(input_pixel[i]);
 	}
+
+	//free(tmp);
+	//free(output);
+	//free(input_pixel);
 
 	cout << "writing opening.bmp ... " << endl;					
 	output_img.WriteToFile(filename);
@@ -363,6 +388,7 @@ void Closing(BMP input, char *filename){
 	BMP output_img;
 	output_img.SetSize(input.TellWidth(), input.TellHeight());
 	output_img.SetBitDepth(8);
+	CreateGrayscaleColorTable(output_img);
 
 	unsigned char **tmp;
 	unsigned char **output;
@@ -402,32 +428,75 @@ void Closing(BMP input, char *filename){
 	}
 
 	for(int i = 0 ; i < input.TellHeight(); i++){
-		free(tmp[i]);
-		free(output[i]);
-		free(input_pixel[i]);
+		//free(tmp[i]);
+		//free(output[i]);
+		//free(input_pixel[i]);
 	}
+
+	//free(tmp);
+	//free(output);
+	//free(input_pixel);
 
 	cout << "writing closing.bmp ... " << endl;					
 	output_img.WriteToFile(filename);
 
 }
 
+void scanAllPixel(BMP input){
+	for(int i = 0; i < input.TellWidth() ;i++){
+		for(int j = 0; j < input.TellHeight(); j++){
+			RGBApixel pixel;
+			pixel = input.GetPixel(i, j);
+
+			if(pixel.Red != pixel.Green || pixel.Green != pixel.Blue){
+				printf("Error at (%d,%d), R = %d, G = %d, B = %d, Alpha = %d\n", i,j, pixel.Red, pixel.Green, pixel.Blue, pixel.Alpha);
+			}
+		}
+
+	}
+}
+
 int main(int argc, char const *argv[])
 {
+	char opt;
 	IMG img;
-	IMG_READ("image/f0542_07.bmp", &img);
-	Binarization(&img);
-	background_removal(&img);
 
-	BMP input_1;
-	input_1.ReadFromFile("HW3_1.bmp");
-	opening(input_1, "opening.bmp");
+	printf("background_removal, please enter 'a'\n");
+	printf("opening, please enter 'b'\n");
+	printf("closing, please enter 'c : ");
+	scanf("%c", &opt);
 
-	BMP input_2;
-	input_2.ReadFromFile("HW3_1.bmp");
-	Closing(input_2, "closing.bmp");
+	switch(opt){
+		case 'a':{
+			IMG_READ(file_path, &img);
+			Binarization(&img);
+			background_removal(&img);
+			break;
+		}
+		case 'b':{
+			IMG_READ(file_path, &img);
+			Binarization(&img);
+			background_removal(&img);
+			BMP input_1;
+			input_1.ReadFromFile("HW3_1.bmp");
+			opening(input_1, "opening.bmp");
+			break;
+		}
+		case 'c':{
+			IMG_READ(file_path, &img);
+			Binarization(&img);
+			background_removal(&img);
+			BMP input_2;
+			input_2.ReadFromFile("HW3_1.bmp");
+			Closing(input_2, "closing.bmp");
+			break;
+		}
+		default:{
+			printf("Invalid input, please try again\n");
+			break;
+		}
+	}
 
-	
 
 
 	return 0;
