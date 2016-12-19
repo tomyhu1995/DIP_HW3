@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <math.h>
 
 #include "EasyBMP.h"
 using namespace std;
@@ -264,15 +265,15 @@ void Erosion(unsigned char **input, unsigned char **output, int width, int heigh
 					counter++;
 					row_count++;
 				}
+
 				row_count = 0;
 				col_count++;
 			}
-			
 			new_value = MaxNeighbor(tmp_neighbor, 3, 3);
 
 			for(int column = i-1; column <= i+1; column++){//column
 				for(int row = j-1; row <= j+1; row++){//row
-					output[column][row] = new_value;
+					output[row][column] = new_value;
 				}
 			}
 
@@ -313,7 +314,7 @@ void Dilation(unsigned char **input, unsigned char **output, int width, int heig
 
 			for(int column = i-1; column <= i+1; column++){//column
 				for(int row = j-1; row <= j+1; row++){//row
-					output[column][row] = new_value;
+					output[row][column] = new_value;
 				}
 			}
 
@@ -349,7 +350,7 @@ void opening(BMP input, char *filename){
 		for(int j = 0; j < input.TellWidth(); j++){
 			input_pixel[i][j] = input.GetPixel(j,i).Red;
 			tmp[i][j] = input.GetPixel(j,i).Red;
-			output[i][j] = input.GetPixel(j,i).Red;
+			//output[i][j] = input.GetPixel(j,i).Red;
 			counter++;
 		}
 	}
@@ -442,6 +443,293 @@ void Closing(BMP input, char *filename){
 
 }
 
+void Sobel_x(unsigned char **input, unsigned char **output, int width, int height){
+	int sample_mask[3][3] = { 
+										{-1,0,1},
+										{-2,0,2},
+										{-1,0,1}};
+	const int min = -1020;
+	const int max = 1020;
+	int new_value = 0;
+
+	int row_count =0, col_count=0;
+	for(int i = 1; i < width - 1 ; i++){
+		for(int j = 1; j < height - 1; j++){
+			/*
+			 * matching
+			 */
+			for(int column = i-1; column <= i+1; column++){//column
+				for(int row = j-1; row <= j+1; row++){//row
+					new_value += input[row][column] * sample_mask[row_count][col_count];
+					row_count++;
+				}
+				row_count = 0;
+				col_count++;
+			}
+			
+			output[j][i] = (unsigned char)new_value * 255 / (max - min);
+
+			new_value = 0;
+			row_count = 0;
+			col_count = 0;
+		}
+	}
+}
+
+void Sobel_y(unsigned char **input, unsigned char **output, int width, int height){
+	int sample_mask[3][3] = { 
+										{-1,-2,-1},
+										{0,0,0},
+										{1,2,1}};
+	const int min = -1020;
+	const int max = 1020;
+	int new_value = 0;
+
+	int row_count =0, col_count=0;
+	for(int i = 1; i < width - 1 ; i++){
+		for(int j = 1; j < height - 1; j++){
+			/*
+			 * matching
+			 */
+			for(int column = i-1; column <= i+1; column++){//column
+				for(int row = j-1; row <= j+1; row++){//row
+					new_value += input[row][column] * sample_mask[row_count][col_count];
+					row_count++;
+				}
+				row_count = 0;
+				col_count++;
+			}
+			
+			output[j][i] = (unsigned char)new_value * 255 / (max - min);
+
+			new_value = 0;
+			row_count = 0;
+			col_count = 0;
+		}
+	}
+}
+
+void avg_filter(int **input, int **output, int width, int height){
+	int sample_mask[15][15] = {1};
+
+	int new_value = 0;
+
+	int row_count =0, col_count=0;
+	for(int i = 7; i < width - 7 ; i++){
+		for(int j = 7; j < height - 7; j++){
+			/*
+			 * matching
+			 */
+			for(int column = i-7; column <= i+7; column++){//column
+				for(int row = j-7; row <= j+7; row++){//row
+					new_value += input[row][column] * sample_mask[row_count][col_count];
+					row_count++;
+				}
+				row_count = 0;
+				col_count++;
+			}
+			
+			output[j][i] = new_value / 15;
+
+			new_value = 0;
+			row_count = 0;
+			col_count = 0;
+		}
+	}
+
+}
+
+void multiply(unsigned char **A, unsigned char **B, int **output, unsigned char coefficient ,int width, int height){
+	for(int i = 0; i < width; i++){
+		for(int j = 0 ; j < height; j++){
+			output[j][i] = (int)coefficient * A[j][i] * B[j][i];
+		}
+	}
+}
+
+void V_y_Calculate(unsigned char **G_x, unsigned char **G_y, int **V_y, int width, int height){
+	for(int i = 0 ; i < height; i++){
+		for (int j = 0; j < width; j++){
+			V_y[i][j] = (int)(G_x[i][j] * G_x[i][j] - G_y[i][j] * G_y[i][j]);
+		}
+	}
+}
+
+void thida_d_Cal(int **phi_x, int **phi_y, double **thida_d, int width, int height){
+	printf("width = %d, height = %d\n", width, height);
+	for(int i = 0 ; i < height; i++){
+		for (int j = 0; j < width; j++){
+			double phi_X = (double)phi_x[i][j];
+			double phi_Y = (double)phi_y[i][j];
+			printf("phi_x[%d][%d] = %f, phi_y[%d][%d] = %f\t", i,j, phi_X, i,j,phi_Y);
+			double tmp = phi_Y/phi_X;
+			thida_d[i][j] = 0.5 * atan(tmp);
+			printf("thida_d_Cal = %f\n", thida_d[i][j]);
+		}
+	}
+}
+
+void vector_cal(double **thida_d, double **vec, int width, int height){
+	double Scale = 8;
+	for(int i = 0 ; i <= (height-16) / 16; i++){
+		for (int j = 0; j <= (width - 16) / 16; j++){
+			vec[i][j] = Scale * cos(thida_d[i*16][j*16]);
+		}
+	}
+}
+
+void sample_matrix_x(int width, int height, int **output){
+	for(int i = 0; i < height; i++){
+		for(int j = 0; j < width; j++){
+			output[i][j] = (j+1)*16;
+			//printf("%d ", output[i][j]);
+		}
+		//printf("\n");
+	}
+}
+
+void sample_matrix_y(int width, int height, int **output){
+	for(int i = 0; i < height; i++){
+		for(int j = 0; j < width; j++){
+			output[i][j] = (i+1)*16;
+			//printf("%d ", output[i][j]);
+		}
+		//printf("\n");
+	}
+}
+
+void Orientation(BMP input, char *filename){
+	BMP output_img;
+	output_img.SetSize(input.TellWidth(), input.TellHeight());
+	output_img.SetBitDepth(8);
+	CreateGrayscaleColorTable(output_img);
+
+	unsigned char **G_x;
+	unsigned char **G_y;
+	int **V_x;
+	int **V_y;
+	int **phi_x;
+	int **phi_y;
+	double **thida_d;
+	double **u;
+	double **v;
+	int **x;
+	int **y;
+	unsigned char **input_pixel;
+	int counter = 0;
+
+	input_pixel = (unsigned char **)malloc(sizeof(unsigned char *) * (input.TellHeight()));
+	G_x = (unsigned char **)malloc(sizeof(unsigned char *) * (input.TellHeight()));
+	G_y = (unsigned char **)malloc(sizeof(unsigned char *) * (input.TellHeight()));
+	V_x = (int **)malloc(sizeof(int *) * (input.TellHeight()));
+	V_y = (int **)malloc(sizeof(int *) * (input.TellHeight()));
+	phi_x = (int **)malloc(sizeof(int *) * (input.TellHeight()));
+	phi_y = (int **)malloc(sizeof(int *) * (input.TellHeight()));
+	thida_d = (double **)malloc(sizeof(double *) * (input.TellHeight()));
+	u = (double **)malloc(sizeof(double *) * (input.TellHeight()));
+	v = (double **)malloc(sizeof(double *) * (input.TellHeight()));
+	x = (int **)malloc(sizeof(int *) * (input.TellHeight()));
+	y = (int **)malloc(sizeof(int *) * (input.TellHeight()));
+
+	for(int i = 0 ; i < input.TellHeight(); i++){
+		G_y[i] = (unsigned char *)malloc(sizeof(unsigned char) * (input.TellWidth()));
+		G_x[i] = (unsigned char *)malloc(sizeof(unsigned char *) * (input.TellWidth()));
+		input_pixel[i] = (unsigned char *)malloc(sizeof(unsigned char *) * (input.TellWidth()));
+		V_x[i] = (int *)malloc(sizeof(int *) * (input.TellWidth()));
+		V_y[i] = (int *)malloc(sizeof(int *) * (input.TellWidth()));
+		phi_x[i] = (int *)malloc(sizeof(int *) * (input.TellWidth()));
+		phi_y[i] = (int *)malloc(sizeof(int *) * (input.TellWidth()));
+		thida_d[i] = (double *)malloc(sizeof(double *) * (input.TellWidth()));
+		u[i] = (double *)malloc(sizeof(double *) * (input.TellWidth()));
+		v[i] = (double *)malloc(sizeof(double *) * (input.TellWidth()));
+		x[i] = (int *)malloc(sizeof(int *) * (input.TellWidth()));
+		y[i] = (int *)malloc(sizeof(int *) * (input.TellWidth()));
+	}
+
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			input_pixel[i][j] = input.GetPixel(j,i).Red;
+			G_x[i][j] = input.GetPixel(j,i).Red;
+			G_y[i][j] = input.GetPixel(j,i).Red;
+			V_x[i][j] = input.GetPixel(j,i).Red;
+			V_y[i][j] = input.GetPixel(j,i).Red;
+			phi_x[i][j] = input.GetPixel(j,i).Red;
+			phi_y[i][j] = input.GetPixel(j,i).Red;
+			counter++;
+		}
+	}
+	//printf("Sobel\n");
+	Sobel_x(input_pixel, G_x, input.TellWidth(), input.TellHeight());
+	Sobel_y(input_pixel, G_y, input.TellWidth(), input.TellHeight());
+	//printf("multiply\n");
+	multiply(G_x, G_y, V_x, 2, input.TellWidth(), input.TellHeight());
+	//printf("V_y_Calculate\n");
+	V_y_Calculate(G_x, G_y, V_y, input.TellWidth(), input.TellHeight());
+	//printf("avg_filter\n");
+	avg_filter(V_x, phi_x, input.TellWidth(), input.TellHeight());
+	avg_filter(V_y, phi_y, input.TellWidth(), input.TellHeight());
+	//printf("thida_d_Cal\n");
+	thida_d_Cal(phi_x, phi_y, thida_d, input.TellWidth(), input.TellHeight());
+	//printf("vector_cal\n");
+	vector_cal(thida_d, u, input.TellWidth(), input.TellHeight());
+	vector_cal(thida_d, v, input.TellWidth(), input.TellHeight());
+	//printf("sample_matrix\n");
+	sample_matrix_x(input.TellWidth(), input.TellHeight(), x);
+	sample_matrix_y(input.TellWidth(), input.TellHeight(), y);
+
+	/*printf("u\n");
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			printf("%f ", u[i][j]);
+		}
+		printf("\n");
+	}
+	printf("\n");*/
+
+	/*printf("v\n");
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			printf("%f ", v[i][j]);
+		}
+		printf("\n");
+	}
+	printf("\n");*/
+
+	/*printf("x\n");
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			printf("%d ", x[i][j]);
+		}
+		printf("\n");
+	}
+	printf("\n");*/
+
+	/*printf("y\n");
+	for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			printf("%d ", y[i][j]);
+		}
+		printf("\n");
+	}
+	printf("\n");*/
+
+
+	/*for(int i = 0; i < input.TellHeight(); i++){
+		for(int j = 0; j < input.TellWidth(); j++){
+			RGBApixel NewPixel;
+			NewPixel.Alpha = input.GetPixel(j,i).Alpha;
+			NewPixel.Blue = output[i][j];
+			NewPixel.Green = output[i][j];
+			NewPixel.Red = output[i][j];
+			output_img.SetPixel( j, i, NewPixel);
+		}
+	}*/
+
+	//cout << "writing testing.bmp ... " << endl;					
+	//output_img.WriteToFile(filename);
+
+}
+
 void scanAllPixel(BMP input){
 	for(int i = 0; i < input.TellWidth() ;i++){
 		for(int j = 0; j < input.TellHeight(); j++){
@@ -463,7 +751,8 @@ int main(int argc, char const *argv[])
 
 	printf("background_removal, please enter 'a'\n");
 	printf("opening, please enter 'b'\n");
-	printf("closing, please enter 'c : ");
+	printf("closing, please enter 'c'\n");
+	printf("Calculate orientation field 'd' : ");
 	scanf("%c", &opt);
 
 	switch(opt){
@@ -489,6 +778,15 @@ int main(int argc, char const *argv[])
 			BMP input_2;
 			input_2.ReadFromFile("HW3_1.bmp");
 			Closing(input_2, "closing.bmp");
+			break;
+		}
+		case 'd':{
+			IMG_READ(file_path, &img);
+			Binarization(&img);
+			background_removal(&img);
+			BMP input_3;
+			input_3.ReadFromFile("HW3_1.bmp");
+			Orientation(input_3, "testing.bmp");
 			break;
 		}
 		default:{
