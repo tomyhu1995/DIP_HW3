@@ -20,9 +20,11 @@ extern "C"{
 	#include "IMG_CREATE.h"
 }
 
-#define file_path "image/f0542_07.bmp"
-//#define file_path "image/s0554_02.bmp"
+//#define file_path "image/f0542_07.bmp"
+#define file_path "image/s0554_02.bmp"
 #define tmp_file "tmp.bmp"
+
+int BINARY_THRESHOLD;
 
 void PRINT_IMG_INFO(IMG img){
 	printf("----------------Image header----------------\n");
@@ -124,7 +126,7 @@ void IMG_READ(char *filename, IMG *output_img){
 void Binarization(IMG *img){
 	int i;
 	for(i = 0; i < img->info_head.width * img->info_head.height; i++){
-		if(img->pixels[i].color[0] >= 100){
+		if(img->pixels[i].color[0] >= BINARY_THRESHOLD){
 			img->pixels[i].color[0] = 255;
 		}else{
 			img->pixels[i].color[0] = 0;
@@ -754,6 +756,9 @@ int main(int argc, char const *argv[])
 	printf("closing, please enter 'c'\n");
 	printf("Calculate orientation field 'd' : ");
 	scanf("%c", &opt);
+
+	printf("Threshold of Binarization = ");
+	scanf("%d", &BINARY_THRESHOLD);
 
 	switch(opt){
 		case 'a':{
