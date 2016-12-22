@@ -21,7 +21,7 @@ extern "C"{
 }
 
 //#define file_path "image/f0542_07.bmp"
-#define file_path "image/s0554_02.bmp"
+//#define file_path "image/s0554_02.bmp"
 #define tmp_file "tmp.bmp"
 
 int BINARY_THRESHOLD;
@@ -134,7 +134,7 @@ void Binarization(IMG *img){
 	}
 }
 
-void background_removal(IMG *img){
+void background_removal(IMG *img, char *file_path){
 	unsigned char **tmp;
 	int *cumulative_vertical;
 	int *cumulative_horizontal;
@@ -746,7 +746,7 @@ void scanAllPixel(BMP input){
 	}
 }
 
-int main(int argc, char const *argv[])
+int main(int argc, char* argv[])
 {
 	char opt;
 	IMG img;
@@ -762,33 +762,33 @@ int main(int argc, char const *argv[])
 
 	switch(opt){
 		case 'a':{
-			IMG_READ(file_path, &img);
+			IMG_READ(argv[1], &img);
 			Binarization(&img);
-			background_removal(&img);
+			background_removal(&img, argv[1]);
 			break;
 		}
 		case 'b':{
-			IMG_READ(file_path, &img);
+			IMG_READ(argv[1], &img);
 			Binarization(&img);
-			background_removal(&img);
+			background_removal(&img, argv[1]);
 			BMP input_1;
 			input_1.ReadFromFile("HW3_1.bmp");
 			opening(input_1, "opening.bmp");
 			break;
 		}
 		case 'c':{
-			IMG_READ(file_path, &img);
+			IMG_READ(argv[1], &img);
 			Binarization(&img);
-			background_removal(&img);
+			background_removal(&img, argv[1]);
 			BMP input_2;
 			input_2.ReadFromFile("HW3_1.bmp");
 			Closing(input_2, "closing.bmp");
 			break;
 		}
 		case 'd':{
-			IMG_READ(file_path, &img);
+			IMG_READ(argv[1], &img);
 			Binarization(&img);
-			background_removal(&img);
+			background_removal(&img, argv[1]);
 			BMP input_3;
 			input_3.ReadFromFile("HW3_1.bmp");
 			Orientation(input_3, "testing.bmp");
